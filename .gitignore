@@ -1,4 +1,3 @@
 .venv
 .env
-**.gz
-**/**.jsonl
+**/**.parquet
