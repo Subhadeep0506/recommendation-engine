@@ -39,6 +39,30 @@ class Neo4jImporter:
                 session.run(f"CREATE DATABASE {self.database}")
                 print(f"Database '{self.database}' created.")
 
+    def create_product_query(self) -> str:
+        query = """
+        UNWIND $products AS product
+        MERGE (p:Product {title: product.title})
+        SET p.description = product.description,
+            p.average_rating = toFloat(product.average_rating),
+            p.rating_number = toInteger(product.rating_number),
+            p.price = toFloat(product.price),
+            p.features = product.features,
+            p.images = product.images,
+            p.brand = product.brand,
+            p.categories = product.categories,
+            p.manufacturer = product.manufacturer,
+            p.title_embedding = product.title_embedding,
+            p.description_embedding = product.desc_embedding
+        WITH p, product
+        MERGE (s:Store {name: product.store})
+        MERGE (p)-[:SOLD_BY]->(s)
+        WITH p, product
+        MERGE (c:Category {name: product.main_category})
+        MERGE (p)-[:IS_OF_CATEGORY]->(c)
+        """
+        return query
+
     def setup_constraints(self):
         with self.driver.session() as session:
             session.run(
@@ -115,13 +139,13 @@ class Neo4jImporter:
                     self.model.encode(
                         batch["title"].to_list(),
                         convert_to_numpy=True,
-                        batch_size=batch_size / 10,
+                        batch_size=batch_size // 10,
                         show_progress_bar=True,
                     ).tolist(),
                     self.model.encode(
                         batch["description"].to_list(),
                         convert_to_numpy=True,
-                        batch_size=batch_size / 10,
+                        batch_size=batch_size // 10,
                         show_progress_bar=True,
                     ).tolist(),
                 )
@@ -131,5 +155,4 @@ class Neo4jImporter:
                         "description": descriptions[i],
                     }
                     session.execute_write(self.create_product, row, embeddings)
-
         self.driver.close()
