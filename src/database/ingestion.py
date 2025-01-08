@@ -1,10 +1,10 @@
-import pandas as pd
 import json
+from typing import Any, Dict, List
 
-from typing import Dict, List, Any
-from tqdm import tqdm
+import pandas as pd
 from neo4j import GraphDatabase
 from sentence_transformers import SentenceTransformer
+from tqdm import tqdm
 
 
 class Neo4jImporter:
@@ -15,12 +15,29 @@ class Neo4jImporter:
         database: str = "neo4j",
         password: str = "pillsgap",
     ):
+        self.database = database
+        self.uri = uri
+        self.user = user
+        self.password = password
+
+        self.pre_checks()
         self.driver = GraphDatabase.driver(
             uri, auth=(user, password), database=database
         )
         self.model = SentenceTransformer(
-            "jinaai/jina-embeddings-v3", trust_remote_code=True
+            "jinaai/jina-embeddings-v3",
+            trust_remote_code=True,
+            device="cuda",
         )
+
+    def pre_checks(self):
+        driver = GraphDatabase.driver(self.uri, auth=(self.user, self.password))
+        with driver.session() as session:
+            result = session.run("SHOW DATABASES")
+            databases = [record["name"] for record in result]
+            if self.database not in databases:
+                session.run(f"CREATE DATABASE {self.database}")
+                print(f"Database '{self.database}' created.")
 
     def setup_constraints(self):
         with self.driver.session() as session:
@@ -94,10 +111,24 @@ class Neo4jImporter:
         for i in tqdm(range(0, len(df), batch_size)):
             batch = df.iloc[i : i + batch_size]
             with self.driver.session() as session:
-                for _, row in batch.iterrows():
+                titles, descriptions = (
+                    self.model.encode(
+                        batch["title"].to_list(),
+                        convert_to_numpy=True,
+                        batch_size=batch_size / 10,
+                        show_progress_bar=True,
+                    ).tolist(),
+                    self.model.encode(
+                        batch["description"].to_list(),
+                        convert_to_numpy=True,
+                        batch_size=batch_size / 10,
+                        show_progress_bar=True,
+                    ).tolist(),
+                )
+                for i, row in batch.iterrows():
                     embeddings = {
-                        "title": self.model.encode(row["title"]).tolist(),
-                        "description": self.model.encode(row["description"]).tolist(),
+                        "title": titles[i],
+                        "description": descriptions[i],
                     }
                     session.execute_write(self.create_product, row, embeddings)
 
