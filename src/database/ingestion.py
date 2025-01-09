@@ -156,3 +156,46 @@ class Neo4jImporter:
                     }
                     session.execute_write(self.create_product, row[1], embeddings)
         self.driver.close()
+
+    def calculate_embeddings(self, data_path: str, batch_size: int = 100):
+        df = pd.read_parquet(data_path)
+        title_embeddings = []
+        description_embeddings = []
+        for i in tqdm(range(0, len(df), batch_size)):
+            batch = df.iloc[i : i + batch_size]
+            titles, descriptions = (
+                self.model.encode(
+                    batch["title"].to_list(),
+                    convert_to_numpy=True,
+                    batch_size=batch_size // 10,
+                    show_progress_bar=True,
+                ).tolist(),
+                self.model.encode(
+                    batch["description"].to_list(),
+                    convert_to_numpy=True,
+                    batch_size=batch_size // 10,
+                    show_progress_bar=True,
+                ).tolist(),
+            )
+            title_embeddings.extend(titles)
+            description_embeddings.extend(descriptions)
+        df["title_embeddings"] = title_embeddings
+        df["description_embeddings"] = description_embeddings
+
+        df.to_parquet(data_path.replace(".parquet", "_with_embeddings.parquet"))
+
+    def import_embeddings_data(self, data_path: str):
+        df = pd.read_parquet(data_path)
+        self.setup_constraints()
+
+        with self.driver.session() as session:
+            for i, row in tqdm(df.iterrows(), total=len(df)):
+                session.execute_write(
+                    self.create_product,
+                    row[1],
+                    {
+                        "title": row[1]["title_embeddings"],
+                        "description": row[1]["description_embeddings"],
+                    },
+                )
+        self.driver.close()

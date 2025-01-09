@@ -1,12 +1,17 @@
-import pandas as pd
-
 from src.database.ingestion import Neo4jImporter
 
 importer = Neo4jImporter(
-    uri="neo4j+s://2d97deb5.databases.neo4j.io",
+    uri="neo4j+s://df8984b6.databases.neo4j.io",
     user="neo4j",
+    password="2aEd8LiA2dzva5eltTCC5SesllDW8Ucs_PjmQCic-h4",
     database="neo4j",
-    password="XHrRfUiYu6CowDl9fLV7e9xBkeoc1sw1Z2Q_mtoa1n8",
 )
-products = pd.read_parquet("./data/amazon_sample_metadata_2023.parquet")[:100]
-importer.add_batch_of_products(products)
+
+# importer.import_data("./dataset/amazon_sample_metadata_2023.parquet", batch_size=1000)
+# importer.calculate_embeddings(
+#     "./dataset/amazon_sample_metadata_2023.parquet", batch_size=1000
+# )
+
+importer.import_embeddings_data(
+    "./data/amazon_sample_metadata_2023_with_embeddings.parquet"
+)
