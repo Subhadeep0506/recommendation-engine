@@ -105,7 +105,7 @@ class Neo4jImporter:
             else str(row["features"])
         )
         images = (
-            json.dumps(row["images"])
+            json.dumps([row["images"][0]])
             if isinstance(row["images"], (dict, list))
             else str(row["images"])
         )
@@ -149,10 +149,10 @@ class Neo4jImporter:
                         show_progress_bar=True,
                     ).tolist(),
                 )
-                for i, row in batch.iterrows():
+                for i, row in enumerate(batch.iterrows()):
                     embeddings = {
                         "title": titles[i],
                         "description": descriptions[i],
                     }
-                    session.execute_write(self.create_product, row, embeddings)
+                    session.execute_write(self.create_product, row[1], embeddings)
         self.driver.close()
