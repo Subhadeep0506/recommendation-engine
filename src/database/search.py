@@ -33,6 +33,7 @@ class Neo4jSearch:
                 product = {
                     "title": record["title"],
                     "description": record["description"],
+                    "product_id": record["product_id"],
                     "average_rating": record["average_rating"],
                     "rating_number": record["rating_number"],
                     "price": record["price"],
@@ -58,7 +59,7 @@ class Neo4jSearch:
         query = """
         MATCH (p:Product)-[:SOLD_BY]->(s:Store), (p)-[:IS_OF_CATEGORY]->(c:Category)
         WITH p, s, c, gds.similarity.cosine(p.title_embedding, $query_embeddings) AS title_sim, gds.similarity.cosine(p.description_embedding, $query_embeddings) AS desc_sim
-        RETURN p.title AS title, p.description AS description, p.average_rating AS average_rating, p.rating_number AS rating_number, p.price AS price, p.features AS features, p.images AS images, p.brand AS brand, p.manufacturer AS manufacturer, s.name AS store, c.name AS main_category, (title_sim + desc_sim) / 2 AS avg_sim
+        RETURN p.title AS title, p.description AS description, p.product_id AS product_id, p.average_rating AS average_rating, p.rating_number AS rating_number, p.price AS price, p.features AS features, p.images AS images, p.brand AS brand, p.manufacturer AS manufacturer, s.name AS store, c.name AS main_category, (title_sim + desc_sim) / 2 AS avg_sim
         ORDER BY avg_sim DESC
         LIMIT $top_n
         """
@@ -75,7 +76,7 @@ class Neo4jSearch:
         MATCH (p:Product)-[:SOLD_BY]->(s:Store), (p)-[:IS_OF_CATEGORY]->(c:Category)
         WHERE c.name = $main_category
         WITH p, s, c, rand() AS random
-        RETURN p.title AS title, p.description AS description, p.average_rating AS average_rating, p.rating_number AS rating_number, p.price AS price, p.features AS features, p.images AS images, p.brand AS brand, p.manufacturer AS manufacturer, s.name AS store, c.name AS main_category
+        RETURN p.title AS title, p.description AS description, p.product_id AS product_id, p.average_rating AS average_rating, p.rating_number AS rating_number, p.price AS price, p.features AS features, p.images AS images, p.brand AS brand, p.manufacturer AS manufacturer, s.name AS store, c.name AS main_category
         ORDER BY random
         LIMIT $top_n
         """
@@ -94,7 +95,7 @@ class Neo4jSearch:
         MATCH (p:Product)-[:SOLD_BY]->(s:Store), (p)-[:IS_OF_CATEGORY]->(c:Category)
         WHERE s.name = $store
         WITH p, s, c, rand() AS random
-        RETURN p.title AS title, p.description AS description, p.average_rating AS average_rating, p.rating_number AS rating_number, p.price AS price, p.features AS features, p.images AS images, p.brand AS brand, p.manufacturer AS manufacturer, s.name AS store, c.name AS main_category
+        RETURN p.title AS title, p.description AS description, p.product_id AS product_id, p.average_rating AS average_rating, p.rating_number AS rating_number, p.price AS price, p.features AS features, p.images AS images, p.brand AS brand, p.manufacturer AS manufacturer, s.name AS store, c.name AS main_category
         ORDER BY random
         LIMIT $top_n
         """

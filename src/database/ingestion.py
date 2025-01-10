@@ -44,6 +44,7 @@ class Neo4jImporter:
         UNWIND $products AS product
         MERGE (p:Product {title: product.title})
         SET p.description = product.description,
+            p.product_id = product.product_id,
             p.average_rating = toFloat(product.average_rating),
             p.rating_number = toInteger(product.rating_number),
             p.price = toFloat(product.price),
@@ -81,6 +82,7 @@ class Neo4jImporter:
         query = """
         MERGE (p:Product {title: $title})
         SET p.description = $description,
+            p.product_id = $product_id,
             p.average_rating = toFloat($average_rating),
             p.rating_number = toInteger($rating_number),
             p.price = toFloat($price),
@@ -106,7 +108,7 @@ class Neo4jImporter:
         )
         images = (
             json.dumps([row["images"][0]])
-            if isinstance(row["images"], (dict, list))
+            if isinstance(row["images"], list)
             else str(row["images"])
         )
 
@@ -114,6 +116,7 @@ class Neo4jImporter:
             query,
             title=row["title"],
             description=row["description"],
+            product_id=row["product_id"],
             average_rating=row["average_rating"],
             rating_number=row["rating_number"],
             price=row["price"],
@@ -192,10 +195,10 @@ class Neo4jImporter:
             for i, row in tqdm(df.iterrows(), total=len(df)):
                 session.execute_write(
                     self.create_product,
-                    row[1],
+                    row,
                     {
-                        "title": row[1]["title_embeddings"],
-                        "description": row[1]["description_embeddings"],
+                        "title": row["title_embeddings"],
+                        "description": row["description_embeddings"],
                     },
                 )
         self.driver.close()
